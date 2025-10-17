@@ -75,5 +75,4 @@ using (var scope = app.Services.CreateScope())
     using var context = contextFactory.CreateDbContext();
     context.Database.EnsureCreated();
 }
-
 app.Run();
