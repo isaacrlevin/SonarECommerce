@@ -1,0 +1,399 @@
+@page "/product/{ProductId:int}"
+@using SonarECommerce.Data.Models
+@using SonarECommerce.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject IProductService ProductService
+@inject IShoppingCartService CartService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>@(product?.Name ?? "Product") - TechStore</PageTitle>
+
+@if (loading)
+{
+    <div class="container py-5">
+        <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+}
+else if (product == null)
+{
+    <div class="container py-5">
+        <div class="text-center">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h2>Product Not Found</h2>
+            <p class="text-muted">The product you're looking for could not be found.</p>
+            <a href="/products" class="btn btn-primary">Browse All Products</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container py-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item"><a href="/products">Products</a></li>
+                <li class="breadcrumb-item"><a href="/products/category/@product.CategoryId">@product.Category.Name</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@product.Name</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <!-- Product Image -->
+            <div class="col-lg-6 mb-4">
+                <div class="product-image-container">
+                    @if (string.IsNullOrWhiteSpace(product.ImageUrl))
+                    {
+                        <!-- Placeholder for missing image -->
+                        <div class="bg-light d-flex align-items-center justify-content-center rounded shadow-sm" style="width: 100%; height: 500px;">
+                            <i class="fas fa-microchip fa-5x text-muted"></i>
+                        </div>
+                    }
+                    else
+                    {
+                        <img src="@product.ImageUrl" alt="@product.Name" class="img-fluid rounded shadow-sm" style="width: 100%; max-height: 500px; object-fit: contain;">
+                    }
+                </div>
+            </div>
+
+            <!-- Product Details -->
+            <div class="col-lg-6">
+                <div class="product-details">
+                    <h1 class="display-6 fw-bold mb-3">@product.Name</h1>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-primary me-2">@product.Category.Name</span>
+                        <span class="badge bg-secondary">@product.Brand</span>
+                    </div>
+
+                    <div class="price-section mb-4">
+                        @if (product.OriginalPrice.HasValue && product.OriginalPrice > product.Price)
+                        {
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="h2 text-success mb-0">$@product.Price.ToString("F2")</span>
+                                <span class="h5 text-muted text-decoration-line-through mb-0">$@product.OriginalPrice.Value.ToString("F2")</span>
+                                <span class="badge bg-danger">
+                                    @(Math.Round((product.OriginalPrice.Value - product.Price) / product.OriginalPrice.Value * 100))% OFF
+                                </span>
+                            </div>
+                        }
+                        else
+                        {
+                            <span class="h2 text-success">$@product.Price.ToString("F2")</span>
+                        }
+                    </div>
+
+                    <div class="stock-info mb-4">
+                        @if (product.StockQuantity > 0)
+                        {
+                            <div class="d-flex align-items-center text-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <span class="fw-semibold">In Stock (@product.StockQuantity available)</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex align-items-center text-danger">
+                                <i class="fas fa-times-circle me-2"></i>
+                                <span class="fw-semibold">Out of Stock</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Quantity and Add to Cart -->
+                    <div class="purchase-section mb-4">
+                        <AuthorizeView>
+                            <Authorized>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Quantity</label>
+                                        <div class="input-group">
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="DecreaseQuantity" disabled="@(quantity <= 1)">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <input type="number" class="form-control text-center" @bind="quantity" min="1" max="@product.StockQuantity">
+                                            <button class="btn btn-outline-secondary" type="button" @onclick="IncreaseQuantity" disabled="@(quantity >= product.StockQuantity)">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <label class="form-label fw-semibold d-block">&nbsp;</label>
+                                        <button type="button" class="btn btn-primary btn-lg w-100" 
+                                                @onclick="AddToCart" 
+                                                disabled="@(product.StockQuantity == 0 || addingToCart)">
+                                            @if (addingToCart)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                                <text>Adding...</text>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-cart-plus me-2"></i>
+                                                <text>Add to Cart - $@((product.Price * quantity).ToString("F2"))</text>
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+                            </Authorized>
+                            <NotAuthorized>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Please <a href="/Account/Login" class="alert-link">login</a> to purchase this product.
+                                </div>
+                            </NotAuthorized>
+                        </AuthorizeView>
+                    </div>
+
+                    <!-- Product Features -->
+                    <div class="features-section mb-4">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <i class="fas fa-shipping-fast text-primary fa-2x mb-2"></i>
+                                <div class="small">Free Shipping</div>
+                            </div>
+                            <div class="col-4">
+                                <i class="fas fa-shield-alt text-primary fa-2x mb-2"></i>
+                                <div class="small">Warranty</div>
+                            </div>
+                            <div class="col-4">
+                                <i class="fas fa-undo text-primary fa-2x mb-2"></i>
+                                <div class="small">30-Day Returns</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Description and Specifications -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <ul class="nav nav-tabs" id="productTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="description-tab" data-bs-toggle="tab" data-bs-target="#description" type="button" role="tab">
+                            Description
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="specifications-tab" data-bs-toggle="tab" data-bs-target="#specifications" type="button" role="tab">
+                            Specifications
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">
+                            Reviews
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="productTabsContent">
+                    <div class="tab-pane fade show active" id="description" role="tabpanel">
+                        <div class="p-4">
+                            <h5>Product Description</h5>
+                            <p class="lead">@product.Description</p>
+                            
+
+                            <h6>Key Features:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Brand: @product.Brand</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Model: @product.Model</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Category: @product.Category.Name</li>
+                                @if (!string.IsNullOrEmpty(product.Specifications))
+                                {
+                                    <li><i class="fas fa-check text-success me-2"></i>@product.Specifications</li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="specifications" role="tabpanel">
+                        <div class="p-4">
+                            <h5>Technical Specifications</h5>
+                            <table class="table table-striped">
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-semibold">Brand</td>
+                                        <td>@product.Brand</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-semibold">Model</td>
+                                        <td>@product.Model</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-semibold">Category</td>
+                                        <td>@product.Category.Name</td>
+                                    </tr>
+                                    @if (!string.IsNullOrEmpty(product.Specifications))
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">Additional Specs</td>
+                                            <td>@product.Specifications</td>
+                                        </tr>
+                                    }
+                                    <tr>
+                                        <td class="fw-semibold">Availability</td>
+                                        <td>
+                                            @if (product.StockQuantity > 0)
+                                            {
+                                                <span class="text-success">In Stock (@product.StockQuantity units)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-danger">Out of Stock</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="reviews" role="tabpanel">
+                        <div class="p-4">
+                            <h5>Customer Reviews</h5>
+                            <p class="text-muted">Reviews feature coming soon! Check back later for customer feedback on this product.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Products -->
+        @if (relatedProducts != null && relatedProducts.Any())
+        {
+            <div class="row mt-5">
+                <div class="col-12">
+                    <h3 class="mb-4">Related Products</h3>
+                    <div class="row g-4">
+                        @foreach (var relatedProduct in relatedProducts.Take(4))
+                        {
+                            <div class="col-lg-3 col-md-6">
+                                <div class="card product-card h-100">
+                                    <div class="bg-light d-flex align-items-center justify-content-center" style="height: 200px; cursor: pointer;" @onclick="() => ViewProduct(relatedProduct.Id)">
+                                        <i class="fas fa-microchip fa-3x text-muted"></i>
+                                    </div>
+                                    <div class="card-body d-flex flex-column">
+                                        <h6 class="card-title" style="cursor: pointer;" @onclick="() => ViewProduct(relatedProduct.Id)">@relatedProduct.Name</h6>
+                                        <p class="card-text text-muted small">@relatedProduct.Brand</p>
+                                        <div class="mt-auto">
+                                            <div class="product-price mb-2">$@relatedProduct.Price.ToString("F2")</div>
+                                            <div class="d-grid">
+                                                <a href="/product/@relatedProduct.Id" class="btn btn-outline-primary btn-sm">View Details</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int ProductId { get; set; }
+    
+    private Product? product;
+    private IEnumerable<Product>? relatedProducts;
+    private int quantity = 1;
+    private bool loading = true;
+    private bool addingToCart = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProduct();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProductId > 0)
+        {
+            await LoadProduct();
+        }
+    }
+
+    private async Task LoadProduct()
+    {
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            product = await ProductService.GetProductByIdAsync(ProductId);
+            
+            if (product != null)
+            {
+                // Load related products from the same category
+                var categoryProducts = await ProductService.GetProductsByCategoryAsync(product.CategoryId);
+                relatedProducts = categoryProducts.Where(p => p.Id != ProductId).Take(4);
+            }
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void IncreaseQuantity()
+    {
+        if (product != null && quantity < product.StockQuantity)
+        {
+            quantity++;
+        }
+    }
+
+    private void DecreaseQuantity()
+    {
+        if (quantity > 1)
+        {
+            quantity--;
+        }
+    }
+
+    private async Task AddToCart()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity?.IsAuthenticated == true)
+            return;
+
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId) || product == null)
+            return;
+
+        addingToCart = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await CartService.AddToCartAsync(userId, product.Id, quantity);
+            if (success)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", $"{quantity} item(s) added to cart!", "success");
+                quantity = 1; // Reset quantity
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Failed to add product to cart.", "error");
+            }
+        }
+        finally
+        {
+            addingToCart = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ViewProduct(int productId)
+    {
+        Navigation.NavigateTo($"/product/{productId}");
+    }
+}

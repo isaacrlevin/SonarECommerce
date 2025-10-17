@@ -1,0 +1,461 @@
+@page "/products"
+@page "/products/category/{CategoryId:int}"
+@using SonarECommerce.Data.Models
+@using SonarECommerce.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject IProductService ProductService
+@inject IShoppingCartService CartService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+<PageTitle>Products - TechStore</PageTitle>
+
+<div class="container py-4">
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 col-md-4">
+            <div class="filter-sidebar sticky-top">
+                <h5 class="filter-title">
+                    <i class="fas fa-filter me-2"></i>
+                    Filters
+                </h5>
+                
+                <!-- Search -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Search</label>
+                    <input type="text" class="form-control" @bind="searchTerm" @onkeypress="@OnSearchKeyPress" placeholder="Search products...">
+                </div>
+                
+                <!-- Category Filter -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Category</label>
+                    <select class="form-select" @bind="selectedCategoryId" @bind:after="OnFilterChanged">
+                        <option value="">All Categories</option>
+                        @if (categories != null)
+                        {
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category.Id">@category.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                
+                <!-- Brand Filter -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Brand</label>
+                    <select class="form-select" @bind="selectedBrand" @bind:after="OnFilterChanged">
+                        <option value="">All Brands</option>
+                        @if (brands != null)
+                        {
+                            @foreach (var brand in brands)
+                            {
+                                <option value="@brand">@brand</option>
+                            }
+                        }
+                    </select>
+                </div>
+                
+                <!-- Price Range -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Price Range</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="number" class="form-control" @bind="minPrice" @bind:after="OnFilterChanged" placeholder="Min" min="0" step="0.01">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" class="form-control" @bind="maxPrice" @bind:after="OnFilterChanged" placeholder="Max" min="0" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Clear Filters -->
+                <button type="button" class="btn btn-outline-secondary w-100" @onclick="ClearFilters">
+                    <i class="fas fa-times me-2"></i>
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="col-lg-9 col-md-8">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        @if (CategoryId.HasValue && currentCategory != null)
+                        {
+                            @currentCategory.Name
+                        }
+                        else
+                        {
+                            <text>All Products</text>
+                        }
+                    </h2>
+                    <p class="text-muted mb-0">
+                        @if (products != null)
+                        {
+                            <text>@products.Count() products found</text>
+                        }
+                    </p>
+                </div>
+                
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Sort Options -->
+                    <select class="form-select" style="width: auto;" @bind="sortBy" @bind:after="OnSortChanged">
+                        <option value="name">Name (A-Z)</option>
+                        <option value="name_desc">Name (Z-A)</option>
+                        <option value="price">Price (Low to High)</option>
+                        <option value="price_desc">Price (High to Low)</option>
+                        <option value="newest">Newest First</option>
+                    </select>
+                    
+                    <!-- View Toggle -->
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn @(viewMode == "grid" ? "btn-primary" : "btn-outline-primary")" @onclick='() => SetViewMode("grid")'>
+                            <i class="fas fa-th"></i>
+                        </button>
+                        <button type="button" class="btn @(viewMode == "list" ? "btn-primary" : "btn-outline-primary")" @onclick='() => SetViewMode("list")'>
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Loading State -->
+            @if (loading)
+            {
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (products != null && products.Any())
+            {
+                @if (viewMode == "grid")
+                {
+                    <!-- Grid View -->
+                    <div class="row g-4">
+                        @foreach (var product in products)
+                        {
+                            <div class="col-lg-4 col-md-6">
+                                <div class="card product-card h-100">
+                                    <div class="bg-light d-flex align-items-center justify-content-center" style="height: 200px; cursor: pointer;" @onclick="() => ViewProduct(product.Id)">
+                                        @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                        {
+                                            <img src="@product.ImageUrl" class="card-img-top" alt="@product.Name" style="object-fit: contain; max-height: 180px; max-width: 90%;">
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-microchip fa-3x text-muted"></i>
+                                        }
+                                    </div>
+                                    <div class="card-body d-flex flex-column">
+                                        <h6 class="card-title" style="cursor: pointer;" @onclick="() => ViewProduct(product.Id)">@product.Name</h6>
+                                        <p class="card-text text-muted small">@product.Brand - @product.Category.Name</p>
+                                        <p class="card-text small text-truncate">@product.Description</p>
+                                        <div class="mt-auto">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <div>
+                                                    @if (product.OriginalPrice.HasValue && product.OriginalPrice > product.Price)
+                                                    {
+                                                        <span class="product-original-price me-2">$@product.OriginalPrice.Value.ToString("F2")</span>
+                                                    }
+                                                    <span class="product-price">$@product.Price.ToString("F2")</span>
+                                                </div>
+                                                @if (product.StockQuantity > 0)
+                                                {
+                                                    <span class="badge bg-success">In Stock</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">Out of Stock</span>
+                                                }
+                                            </div>
+                                            <div class="d-grid gap-2">
+                                                <AuthorizeView>
+                                                    <Authorized>
+                                                        <button type="button" class="btn btn-primary btn-sm" 
+                                                                @onclick="() => AddToCart(product.Id)" 
+                                                                disabled="@(product.StockQuantity == 0 || addingToCart)">
+                                                            @if (addingToCart)
+                                                            {
+                                                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <i class="fas fa-cart-plus me-2"></i>
+                                                            }
+                                                            Add to Cart
+                                                        </button>
+                                                    </Authorized>
+                                                    <NotAuthorized>
+                                                        <a href="/Account/Login" class="btn btn-outline-primary btn-sm">Login to Purchase</a>
+                                                    </NotAuthorized>
+                                                </AuthorizeView>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => ViewProduct(product.Id)">
+                                                    View Details
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <!-- List View -->
+                    <div class="row g-3">
+                        @foreach (var product in products)
+                        {
+                            <div class="col-12">
+                                <div class="card product-card">
+                                    <div class="row g-0">
+                                        <div class="col-md-3">
+                                            <div class="bg-light d-flex align-items-center justify-content-center h-100 rounded-start" style="cursor: pointer;" @onclick="() => ViewProduct(product.Id)">
+                                                @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                                {
+                                                    <img src="@product.ImageUrl.Replace(".png", ".png")" class="img-fluid rounded-start" alt="@product.Name" style="object-fit: contain; max-height: 150px; max-width: 90%;">
+                                                }
+                                                else
+                                                {
+                                                    <i class="fas fa-microchip fa-3x text-muted"></i>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="col-md-9">
+                                            <div class="card-body d-flex flex-column h-100">
+                                                <div class="row">
+                                                    <div class="col-md-8">
+                                                        <h5 class="card-title" style="cursor: pointer;" @onclick="() => ViewProduct(product.Id)">@product.Name</h5>
+                                                        <p class="card-text text-muted">@product.Brand - @product.Category.Name</p>
+                                                        <p class="card-text">@product.Description</p>
+                                                    </div>
+                                                    <div class="col-md-4 text-end">
+                                                        <div class="mb-2">
+                                                            @if (product.OriginalPrice.HasValue && product.OriginalPrice > product.Price)
+                                                            {
+                                                                <div class="product-original-price">$@product.OriginalPrice.Value.ToString("F2")</div>
+                                                            }
+                                                            <div class="product-price">$@product.Price.ToString("F2")</div>
+                                                        </div>
+                                                        @if (product.StockQuantity > 0)
+                                                        {
+                                                            <span class="badge bg-success mb-2">In Stock</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-danger mb-2">Out of Stock</span>
+                                                        }
+                                                        <div class="d-grid gap-2">
+                                                            <AuthorizeView>
+                                                                <Authorized>
+                                                                    <button type="button" class="btn btn-primary btn-sm" 
+                                                                            @onclick="() => AddToCart(product.Id)" 
+                                                                            disabled="@(product.StockQuantity == 0 || addingToCart)">
+                                                                        @if (addingToCart)
+                                                                        {
+                                                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <i class="fas fa-cart-plus me-2"></i>
+                                                                        }
+                                                                        Add to Cart
+                                                                    </button>
+                                                                </Authorized>
+                                                                <NotAuthorized>
+                                                                    <a href="/Account/Login" class="btn btn-outline-primary btn-sm">Login to Purchase</a>
+                                                                </NotAuthorized>
+                                                            </AuthorizeView>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => ViewProduct(product.Id)">
+                                                                View Details
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+            else if (!loading)
+            {
+                <!-- No Results -->
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No products found</h4>
+                    <p class="text-muted">Try adjusting your search criteria or filters.</p>
+                    <button type="button" class="btn btn-primary" @onclick="ClearFilters">Clear All Filters</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? CategoryId { get; set; }
+    
+    private IEnumerable<Product>? products;
+    private IEnumerable<Category>? categories;
+    private IEnumerable<string>? brands;
+    private Category? currentCategory;
+    
+    private string searchTerm = string.Empty;
+    private string selectedCategoryId = string.Empty;
+    private string selectedBrand = string.Empty;
+    private decimal? minPrice;
+    private decimal? maxPrice;
+    private string sortBy = "name";
+    private string viewMode = "grid";
+    
+    private bool loading = true;
+    private bool addingToCart = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CategoryId.HasValue)
+        {
+            selectedCategoryId = CategoryId.Value.ToString();
+            currentCategory = await ProductService.GetCategoryByIdAsync(CategoryId.Value);
+        }
+        await LoadProducts();
+    }
+
+    private async Task LoadData()
+    {
+        categories = await ProductService.GetCategoriesAsync();
+        brands = await ProductService.GetBrandsAsync();
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            int? categoryFilter = null;
+            if (!string.IsNullOrEmpty(selectedCategoryId) && int.TryParse(selectedCategoryId, out var catId))
+            {
+                categoryFilter = catId;
+            }
+
+            var allProducts = await ProductService.SearchProductsAsync(
+                searchTerm, 
+                categoryFilter, 
+                minPrice, 
+                maxPrice, 
+                string.IsNullOrEmpty(selectedBrand) ? null : selectedBrand
+            );
+
+            // Apply sorting
+            products = sortBy switch
+            {
+                "name_desc" => allProducts.OrderByDescending(p => p.Name),
+                "price" => allProducts.OrderBy(p => p.Price),
+                "price_desc" => allProducts.OrderByDescending(p => p.Price),
+                "newest" => allProducts.OrderByDescending(p => p.CreatedAt),
+                _ => allProducts.OrderBy(p => p.Name)
+            };
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnFilterChanged()
+    {
+        await LoadProducts();
+    }
+
+    private async Task OnSortChanged()
+    {
+        await LoadProducts();
+    }
+
+    private async Task ClearFilters()
+    {
+        searchTerm = string.Empty;
+        selectedCategoryId = string.Empty;
+        selectedBrand = string.Empty;
+        minPrice = null;
+        maxPrice = null;
+        
+        if (CategoryId.HasValue)
+        {
+            Navigation.NavigateTo("/products");
+        }
+        else
+        {
+            await LoadProducts();
+        }
+    }
+
+    private async Task OnSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await LoadProducts();
+        }
+    }
+
+    private void SetViewMode(string mode)
+    {
+        viewMode = mode;
+    }
+
+    private void ViewProduct(int productId)
+    {
+        Navigation.NavigateTo($"/product/{productId}");
+    }
+
+    private async Task AddToCart(int productId)
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (!authState.User.Identity?.IsAuthenticated == true)
+            return;
+
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return;
+
+        addingToCart = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await CartService.AddToCartAsync(userId, productId);
+            if (success)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Product added to cart!", "success");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Failed to add product to cart.", "error");
+            }
+        }
+        finally
+        {
+            addingToCart = false;
+            StateHasChanged();
+        }
+    }
+}

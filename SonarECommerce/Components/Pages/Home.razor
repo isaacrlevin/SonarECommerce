@@ -1,0 +1,163 @@
+﻿@page "/"
+@using SonarECommerce.Data.Models
+@using SonarECommerce.Services
+@inject IProductService ProductService
+@rendermode InteractiveServer
+
+<PageTitle>TechStore - Premium Computer Components</PageTitle>
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Build Your Dream PC</h1>
+                <p class="lead mb-4">
+                    Discover premium computer components from top brands. 
+                    From high-performance processors to cutting-edge graphics cards, 
+                    we have everything you need to build the ultimate gaming rig.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="/products" class="btn btn-light btn-lg px-4">Shop Now</a>
+                    <a href="/products?featured=true" class="btn btn-outline-light btn-lg px-4">Featured Products</a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <img src="/images/hero-pc.svg" alt="Gaming PC" class="img-fluid" style="max-height: 400px;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold">Shop by Category</h2>
+            <p class="lead text-muted">Find exactly what you need for your build</p>
+        </div>
+        
+        @if (categories != null)
+        {
+            <div class="row g-4">
+                @foreach (var category in categories.Take(8))
+                {
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card category-card h-100">
+                            <div class="bg-primary d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <div class="text-center text-white">
+                                    <i class="fas fa-microchip fa-3x mb-3"></i>
+                                    <h5 class="card-title fw-bold">@category.Name</h5>
+                                    <a href="/products/category/@category.Id" class="btn btn-light btn-sm">Shop Now</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Featured Products Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="display-5 fw-bold">Featured Products</h2>
+            <p class="lead text-muted">Hand-picked premium components for enthusiasts</p>
+        </div>
+        
+        @if (featuredProducts != null)
+        {
+            <div class="row g-4">
+                @foreach (var product in featuredProducts.Take(8))
+                {
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card product-card h-100">
+                            <div class="bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-microchip fa-3x text-muted"></i>
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <h6 class="card-title">@product.Name</h6>
+                                <p class="card-text text-muted small">@product.Brand</p>
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            @if (product.OriginalPrice.HasValue && product.OriginalPrice > product.Price)
+                                            {
+                                                <span class="product-original-price me-2">$@product.OriginalPrice.Value.ToString("F2")</span>
+                                            }
+                                            <span class="product-price">$@product.Price.ToString("F2")</span>
+                                        </div>
+                                        @if (product.StockQuantity > 0)
+                                        {
+                                            <span class="badge bg-success">In Stock</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Out of Stock</span>
+                                        }
+                                    </div>
+                                    <div class="d-grid gap-2">
+                                        <a href="/product/@product.Id" class="btn btn-outline-primary btn-sm">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <div class="text-center mt-5">
+                <a href="/products?featured=true" class="btn btn-primary btn-lg px-5">View All Featured Products</a>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- Why Choose Us Section -->
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="feature-box">
+                    <i class="fas fa-shipping-fast fa-3x mb-3"></i>
+                    <h5>Fast Shipping</h5>
+                    <p class="mb-0">Free shipping on orders over $100</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="feature-box">
+                    <i class="fas fa-shield-alt fa-3x mb-3"></i>
+                    <h5>Warranty</h5>
+                    <p class="mb-0">Comprehensive warranty on all products</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="feature-box">
+                    <i class="fas fa-headset fa-3x mb-3"></i>
+                    <h5>24/7 Support</h5>
+                    <p class="mb-0">Expert technical support available</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="feature-box">
+                    <i class="fas fa-medal fa-3x mb-3"></i>
+                    <h5>Best Prices</h5>
+                    <p class="mb-0">Competitive pricing guaranteed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    private IEnumerable<Category>? categories;
+    private IEnumerable<Product>? featuredProducts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await ProductService.GetCategoriesAsync();
+        featuredProducts = await ProductService.GetFeaturedProductsAsync();
+    }
+}

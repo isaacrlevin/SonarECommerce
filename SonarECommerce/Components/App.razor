@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["SonarECommerce.styles.css"]" />
+
+    <ImportMap />
+    <HeadOutlet />
+</head>
+
+<body>
+    <Routes />
+    <ReconnectModal />
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 11000;"></div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script>
+        window.showToast = (message, type = 'info') => {
+            const toastContainer = document.getElementById('toast-container');
+            const toastId = 'toast-' + Date.now();
+
+            const bgClass = type === 'success' ? 'bg-success' :
+                type === 'error' ? 'bg-danger' :
+                type === 'warning' ? 'bg-warning' : 'bg-primary';
+
+            const toastHtml = `
+                <div id="${toastId}" class="toast ${bgClass} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header ${bgClass} text-white border-0">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                        <strong class="me-auto">TechStore</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+            toast.show();
+
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        };
+    </script>
+
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
+</body>
+
+</html>

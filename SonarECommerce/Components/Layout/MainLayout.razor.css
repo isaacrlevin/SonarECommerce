@@ -1,0 +1,253 @@
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+.page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    flex: 1;
+}
+
+/* Header Styles */
+.site-header {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.navbar-brand i {
+    font-size: 1.8rem;
+}
+
+/* Search Form */
+.navbar .form-control {
+    border-radius: 20px;
+    border: none;
+    background-color: rgba(255,255,255,0.1);
+    color: white;
+    min-width: 250px;
+}
+
+.navbar .form-control::placeholder {
+    color: rgba(255,255,255,0.7);
+}
+
+.navbar .form-control:focus {
+    background-color: rgba(255,255,255,0.2);
+    box-shadow: none;
+    border-color: transparent;
+}
+
+/* Cart Badge */
+.position-relative .badge {
+    font-size: 0.65rem;
+}
+
+/* Dropdown Menus */
+.dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Footer Styles */
+.site-footer {
+    margin-top: auto;
+}
+
+.site-footer a {
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.site-footer a:hover {
+    color: #ffffff !important;
+}
+
+.social-links a {
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+}
+
+.social-links a:hover {
+    transform: scale(1.1);
+}
+
+/* Product Cards */
+.product-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.product-card .card-img-top {
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.product-card:hover .card-img-top {
+    transform: scale(1.05);
+}
+
+.product-price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #28a745;
+}
+
+.product-original-price {
+    text-decoration: line-through;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Category Cards */
+.category-card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+    position: relative;
+}
+
+.category-card:hover {
+    transform: scale(1.02);
+}
+
+.category-card .card-img-overlay {
+    background: linear-gradient(45deg, rgba(0,0,0,0.7), rgba(0,0,0,0.3));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 80px 0;
+}
+
+.hero-section h1 {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.hero-section p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+/* Filter Sidebar */
+.filter-sidebar {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.filter-title {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #495057;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(45deg, #0056b3, #004085);
+    transform: translateY(-1px);
+}
+
+.btn-outline-primary:hover {
+    transform: translateY(-1px);
+}
+
+/* Form Controls */
+.form-control {
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero-section h1 {
+        font-size: 2.5rem;
+    }
+    
+    .navbar .form-control {
+        min-width: 200px;
+    }
+    
+    .product-card .card-img-top {
+        height: 180px;
+    }
+}
+
+@media (max-width: 576px) {
+    .hero-section {
+        padding: 60px 0;
+    }
+    
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+    
+    .navbar .form-control {
+        min-width: 150px;
+    }
+}

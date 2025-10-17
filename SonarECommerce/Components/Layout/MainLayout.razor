@@ -1,0 +1,195 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using SonarECommerce.Services
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IShoppingCartService CartService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="page-wrapper">
+    <header class="site-header">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand d-flex align-items-center" href="/">
+                    <i class="fas fa-microchip me-2"></i>
+                    <strong>TechStore</strong>
+                </a>
+                
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">Home</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                Categories
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/products/category/1">Processors</a></li>
+                                <li><a class="dropdown-item" href="/products/category/2">Graphics Cards</a></li>
+                                <li><a class="dropdown-item" href="/products/category/3">Memory</a></li>
+                                <li><a class="dropdown-item" href="/products/category/4">Storage</a></li>
+                                <li><a class="dropdown-item" href="/products/category/5">Motherboards</a></li>
+                                <li><a class="dropdown-item" href="/products/category/6">Power Supplies</a></li>
+                                <li><a class="dropdown-item" href="/products/category/7">Cooling</a></li>
+                                <li><a class="dropdown-item" href="/products/category/8">Cases</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/products">All Products</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/products">Products</a>
+                        </li>
+                    </ul>
+                    
+                    <div class="d-flex align-items-center">
+                        <!-- Search Form -->
+                        <form class="d-flex me-3" @onsubmit="@PerformSearch" @onsubmit:preventDefault="true">
+                            <input class="form-control me-2" type="search" @bind="searchTerm" placeholder="Search products...">
+                            <button class="btn btn-outline-light" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                        
+                        <!-- Shopping Cart -->
+                        <AuthorizeView>
+                            <Authorized>
+                                <a href="/cart" class="btn btn-outline-light position-relative me-3">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    @if (cartItemCount > 0)
+                                    {
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                            @cartItemCount
+                                        </span>
+                                    }
+                                </a>
+                            </Authorized>
+                        </AuthorizeView>
+                        
+                        <!-- User Account -->
+                        <AuthorizeView>
+                            <Authorized>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-user me-1"></i>
+                                        @context.User.Identity?.Name
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="/account/manage">My Account</a></li>
+                                        <li><a class="dropdown-item" href="/orders">My Orders</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form action="/Account/Logout" method="post" class="dropdown-item p-0">
+                                                <button type="submit" class="btn btn-link dropdown-item">
+                                                    <i class="fas fa-sign-out-alt me-1"></i>
+                                                    Logout
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </Authorized>
+                            <NotAuthorized>
+                                <a href="/Account/Login" class="btn btn-outline-light me-2">Login</a>
+                                <a href="/Account/Register" class="btn btn-light">Register</a>
+                            </NotAuthorized>
+                        </AuthorizeView>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        @Body
+    </main>
+
+    <footer class="site-footer bg-dark text-light py-5 mt-auto">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-3">
+                    <h5 class="mb-3">TechStore</h5>
+                    <p class="text-muted">Your one-stop shop for premium computer components and hardware.</p>
+                    <div class="social-links">
+                        <a href="#" class="text-light me-3"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-light me-3"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-light me-3"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-light"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-3">Categories</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="/products/category/1" class="text-muted">Processors</a></li>
+                        <li><a href="/products/category/2" class="text-muted">Graphics Cards</a></li>
+                        <li><a href="/products/category/3" class="text-muted">Memory</a></li>
+                        <li><a href="/products/category/4" class="text-muted">Storage</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-3">Customer Service</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-muted">Contact Us</a></li>
+                        <li><a href="#" class="text-muted">Shipping Info</a></li>
+                        <li><a href="#" class="text-muted">Returns</a></li>
+                        <li><a href="#" class="text-muted">Support</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="mb-3">Newsletter</h6>
+                    <p class="text-muted small">Stay updated with our latest products and deals.</p>
+                    <div class="input-group">
+                        <input type="email" class="form-control" placeholder="Your email">
+                        <button class="btn btn-primary" type="button">Subscribe</button>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <p class="mb-0 text-muted">&copy; 2024 TechStore. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <img src="/images/payment-methods.png" alt="Payment Methods" class="img-fluid" style="max-height: 30px;">
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private string searchTerm = string.Empty;
+    private int cartItemCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                cartItemCount = await CartService.GetCartItemCountAsync(userId);
+            }
+        }
+    }
+
+    private void PerformSearch()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            Navigation.NavigateTo($"/products?search={Uri.EscapeDataString(searchTerm)}");
+        }
+    }
+}
